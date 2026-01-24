@@ -2,155 +2,147 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
-from fpdf import FPDF
-import base64
 from datetime import datetime
 
-# --- ΡΥΘΜΙΣΗ ΣΕΛΙΔΑΣ (Full Screen) ---
-st.set_page_config(page_title="Olive ERP System", layout="wide", page_icon="🫒")
+# --- 1. ΒΑΣΙΚΕΣ ΡΥΘΜΙΣΕΙΣ (ΚΑΘΑΡΟ DESIGN) ---
+st.set_page_config(page_title="Olive Oil Costing", layout="wide", page_icon="🫒")
 
-# --- CSS ΓΙΑ ΝΑ ΜΟΙΑΖΕΙ ΜΕ DASHBOARD ---
-st.markdown("""
-<style>
-    .metric-card {background-color: #f0f2f6; border-radius: 10px; padding: 15px; border-left: 5px solid #4CAF50;}
-    .stTabs [data-baseweb="tab-list"] {gap: 10px;}
-    .stTabs [data-baseweb="tab"] {height: 50px; white-space: pre-wrap; background-color: #f0f2f6; border-radius: 5px;}
-    .stTabs [data-baseweb="tab"][aria-selected="true"] {background-color: #4CAF50; color: white;}
-</style>
-""", unsafe_allow_html=True)
-
-# --- 1. LOAD DATA (ΠΡΟΣΟΜΟΙΩΣΗ EXCEL) ---
-# Εδώ κανονικά θα βάλουμε: df = pd.read_excel("KostosParagogis.xlsm", sheet_name="Data")
-# Για τώρα φτιάχνω τα dataframes όπως θα ήταν στο Excel σου.
-
+# --- 2. ΔΕΔΟΜΕΝΑ (ΠΡΟΣΟΜΟΙΩΣΗ ΑΠΟ ΤΟ EXCEL ΣΟΥ) ---
 @st.cache_data
 def load_data():
-    # Sheet: Τιμές Λαδιού
+    # Τιμές Λαδιού
     oils = pd.DataFrame({
-        "Είδος": ["Extra Virgin (EVOO)", "Organic (BIO)", "PDO (ΠΟΠ Sitia)", "Pure Olive Oil"],
-        "Τιμή/Kg (€)": [7.50, 9.20, 8.10, 6.80],
-        "Φύρα (%)": [2.0, 3.0, 2.5, 1.5]
+        "Είδος": ["Extra Virgin (EVOO)", "Organic (BIO)", "PDO (ΠΟΠ Sitia)", "Lampante"],
+        "Τιμή/Kg (€)": [7.50, 9.20, 8.10, 5.50],
+        "Φύρα (%)": [2.0, 3.0, 2.5, 4.0]
     })
     
-    # Sheet: Υλικά Συσκευασίας
+    # Υλικά Συσκευασίας
     packaging = pd.DataFrame({
         "Περιγραφή": ["Dorica 250ml", "Dorica 500ml", "Marasca 750ml", "Tin 5L", "Pet 1L"],
-        "Κόστος Υλικών (€)": [0.45, 0.58, 0.72, 1.45, 0.35], # Μπουκάλι+Καπάκι+Ετικέτα
+        "Κόστος Υλικών (€)": [0.45, 0.58, 0.72, 1.45, 0.35], 
         "Τεμάχια/Κιβώτιο": [12, 12, 6, 4, 12],
         "Κιβώτια/Παλέτα": [120, 80, 70, 40, 60]
     })
-    
     return oils, packaging
 
 df_oils, df_pack = load_data()
 
-# --- SIDEBAR MENU (ΠΛΟΗΓΗΣΗ) ---
+# --- 3. SIDEBAR (ΜΕΝΟΥ ΑΡΙΣΤΕΡΑ) ---
 with st.sidebar:
-    st.image("https://cdn-icons-png.flaticon.com/512/2829/2829824.png", width=80)
-    st.title("Olive ERP v2.0")
-    st.write("Logged in as: **Admin**")
-    st.divider()
+    st.header("🎛️ Ρυθμίσεις Παραγωγής")
     
-    # Global Settings
-    st.header("⚙️ Παράμετροι")
-    labor_rate = st.number_input("Εργατικά (€/ώρα)", value=65.0)
-    overhead_rate = st.number_input("Γενικά Έξοδα (%)", value=15.0)
-    currency = st.selectbox("Νόμισμα", ["EUR (€)", "USD ($)"])
+    st.subheader("Γενικά Κόστη")
+    labor_rate = st.number_input("Εργατικά (€/ώρα)", value=65.0, step=5.0)
+    overhead_rate = st.number_input("Γενικά Έξοδα (%)", value=15.0, step=1.0)
+    
+    st.divider()
+    st.subheader("Διαχείριση")
+    st.info("Επεξεργασία Τιμών στα Tabs δεξιά")
 
-# --- ΚΥΡΙΩΣ ΕΦΑΡΜΟΓΗ ME TABS ---
-tab1, tab2, tab3 = st.tabs(["📊 Dashboard & Analytics", "💰 Κοστολόγηση (Calculator)", "🗃️ Βάση Δεδομένων (Excel Data)"])
+# --- 4. ΚΥΡΙΩΣ ΟΘΟΝΗ ---
+st.title("🫒 Olive Oil Costing System")
 
-# --- TAB 1: DASHBOARD (Η "ΜΕΓΑΛΗ ΕΙΚΟΝΑ") ---
+# Tabs για οργάνωση
+tab1, tab2, tab3 = st.tabs(["💰 ΥΠΟΛΟΓΙΣΜΟΣ ΚΟΣΤΟΥΣ", "📊 DASHBOARD", "📝 ΔΕΔΟΜΕΝΑ (EXCEL)"])
+
+# --- TAB 1: CALCULATOR (ΤΟ ΚΥΡΙΟ ΕΡΓΑΛΕΙΟ) ---
 with tab1:
-    st.subheader("📈 Επισκόπηση Παραγωγής & Αγοράς")
+    st.markdown("### 🛠️ Δημιουργία Προσφοράς")
     
-    # KPI Cards (Custom HTML)
-    c1, c2, c3, c4 = st.columns(4)
-    c1.markdown('<div class="metric-card"><h3>Τιμή EVOO</h3><h1>7.50€</h1><p>Change: +5% 📈</p></div>', unsafe_allow_html=True)
-    c2.markdown('<div class="metric-card"><h3>Ενεργές Προσφορές</h3><h1>12</h1><p>Pending Approval</p></div>', unsafe_allow_html=True)
-    c3.markdown('<div class="metric-card"><h3>Μέσο Περιθώριο</h3><h1>22%</h1><p>Target: 25%</p></div>', unsafe_allow_html=True)
-    c4.markdown('<div class="metric-card"><h3>Stock Παραγωγής</h3><h1>4,500L</h1><p>Tank 3 & 4</p></div>', unsafe_allow_html=True)
+    # Inputs σε 3 στήλες
+    col1, col2, col3 = st.columns(3)
     
-    st.divider()
-    
-    col_chart1, col_chart2 = st.columns(2)
-    with col_chart1:
-        st.caption("Διακύμανση Τιμών Λαδιού (Τελευταίο 6μηνο)")
-        # Mock Data για το γράφημα
-        chart_data = pd.DataFrame({
-            'Month': ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
-            'EVOO': [7.1, 7.2, 7.5, 7.4, 7.6, 7.5],
-            'BIO': [8.5, 8.8, 9.0, 9.2, 9.1, 9.2]
-        })
-        fig = px.line(chart_data, x='Month', y=['EVOO', 'BIO'], markers=True)
-        st.plotly_chart(fig, use_container_width=True)
-        
-    with col_chart2:
-        st.caption("Ανάλυση Κόστους ανά Φιάλη (Breakdown)")
-        # Pie Chart
-        labels = ['Λάδι', 'Γυαλί/Συσκευασία', 'Εργατικά', 'Μεταφορικά', 'Λειτουργικά']
-        values = [65, 20, 5, 5, 5]
-        fig2 = go.Figure(data=[go.Pie(labels=labels, values=values, hole=.4)])
-        st.plotly_chart(fig2, use_container_width=True)
-
-# --- TAB 2: CALCULATOR (ΤΟ "ΖΟΥΜΙ") ---
-with tab2:
-    st.subheader("🛠️ Εργαλείο Κοστολόγησης & Προσφοράς")
-    
-    # Layout 3 Στηλών για Inputs
-    c1, c2, c3 = st.columns(3)
-    
-    with c1:
-        st.markdown("##### 1. Σύνθεση Προϊόντος")
-        sel_oil = st.selectbox("Επιλογή Λαδιού", df_oils["Είδος"])
-        sel_pack = st.selectbox("Επιλογή Συσκευασίας", df_pack["Περιγραφή"])
+    with col1:
+        st.markdown("**1. Επιλογή Προϊόντος**")
+        sel_oil = st.selectbox("Είδος Λαδιού", df_oils["Είδος"])
+        sel_pack = st.selectbox("Συσκευασία", df_pack["Περιγραφή"])
         qty = st.number_input("Ποσότητα (Φιάλες)", value=1000, step=100)
-    
-    with c2:
-        st.markdown("##### 2. Εμπορικά")
-        margin = st.slider("Περιθώριο Κέρδους (%)", 0, 100, 25)
-        incoterm = st.selectbox("Incoterm", ["EXW (Εργοστάσιο)", "FOB (Λιμάνι)", "CIF (Παράδοση)"])
-        dest = st.selectbox("Προορισμός", ["Ελλάδα", "Γερμανία", "USA", "Κίνα"])
-        
-    with c3:
-        st.markdown("##### 3. Αποτελέσματα")
-        if st.button("Υπολογισμός Τώρα 🚀", type="primary", use_container_width=True):
-            # --- CALCULATIONS LOGIC ---
-            # Βρίσκουμε τις τιμές από τα Dataframes
-            oil_price = df_oils.loc[df_oils["Είδος"] == sel_oil, "Τιμή/Kg (€)"].values[0]
-            oil_loss = df_oils.loc[df_oils["Είδος"] == sel_oil, "Φύρα (%)"].values[0]
-            pack_cost = df_pack.loc[df_pack["Περιγραφή"] == sel_pack, "Κόστος Υλικών (€)"].values[0]
-            
-            # Απλοποιημένος υπολογισμός για το Demo
-            volume = 500 # ml (υπόθεση)
-            oil_cost_unit = ((volume * 0.916 / 1000) * oil_price) * (1 + oil_loss/100)
-            full_cost = (oil_cost_unit + pack_cost) * (1 + overhead_rate/100)
-            final_price = full_cost / (1 - margin/100)
-            
-            # --- DISPLAY RESULTS ---
-            st.success(f"Προτεινόμενη Τιμή: €{final_price:.2f}")
-            
-            # Details Table
-            res_df = pd.DataFrame({
-                "Στοιχείο": ["Κόστος Λαδιού", "Υλικά Συσκευασίας", "Γενικά Έξοδα", "Περιθώριο Κέρδους"],
-                "Ποσό (€)": [oil_cost_unit, pack_cost, full_cost*overhead_rate/100, final_price - full_cost]
-            })
-            st.dataframe(res_df, use_container_width=True)
-            
-            # Bar Chart Breakdown
-            fig_bar = px.bar(res_df, x="Στοιχείο", y="Ποσό (€)", title="Ανάλυση Τιμής", color="Στοιχείο")
-            st.plotly_chart(fig_bar, use_container_width=True)
 
-# --- TAB 3: DATABASE (Η ΔΙΑΧΕΙΡΙΣΗ) ---
+    with col2:
+        st.markdown("**2. Εμπορική Πολιτική**")
+        margin = st.slider("Περιθώριο Κέρδους (%)", 5, 50, 20)
+        incoterm = st.selectbox("Όρος Παράδοσης (Incoterm)", ["EXW (Εργοστάσιο)", "FOB (Λιμάνι)", "CIF (Παράδοση σε Πελάτη)"])
+    
+    with col3:
+        st.markdown("**3. Προορισμός**")
+        dest = st.selectbox("Χώρα / Ζώνη", ["Ελλάδα", "Γερμανία (EU)", "ΗΠΑ (USA)", "Κίνα"])
+        if incoterm != "EXW":
+            st.info("⚠️ Οι τιμές FOB/CIF θα προσθέσουν μεταφορικά.")
+
+    st.divider()
+
+    # ΥΠΟΛΟΓΙΣΜΟΙ
+    if st.button("🧮 ΥΠΟΛΟΓΙΣΜΟΣ ΤΙΜΗΣ", type="primary", use_container_width=True):
+        
+        # Λήψη τιμών από τους πίνακες
+        oil_row = df_oils[df_oils["Είδος"] == sel_oil].iloc[0]
+        pack_row = df_pack[df_pack["Περιγραφή"] == sel_pack].iloc[0]
+        
+        # Μαθηματικά
+        # 1. Λάδι (500ml -> ~0.458kg) + Φύρα
+        vol_ml = 500 # Default αν δεν βρούμε άλλο
+        if "250" in sel_pack: vol_ml = 250
+        elif "750" in sel_pack: vol_ml = 750
+        elif "5L" in sel_pack: vol_ml = 5000
+        elif "1L" in sel_pack: vol_ml = 1000
+            
+        weight_kg = (vol_ml * 0.916) / 1000
+        cost_oil = (weight_kg * oil_row["Τιμή/Kg (€)"]) * (1 + oil_row["Φύρα (%)"]/100)
+        
+        # 2. Συσκευασία
+        cost_pack = pack_row["Κόστος Υλικών (€)"]
+        
+        # 3. Εργατικά (Υπόθεση 500 φιάλες/ώρα)
+        cost_labor = labor_rate / 500
+        
+        # 4. Σύνολο Κόστους
+        total_cost = (cost_oil + cost_pack + cost_labor) * (1 + overhead_rate/100)
+        
+        # 5. Τιμή Πώλησης
+        price = total_cost / (1 - margin/100)
+        
+        # ΕΜΦΑΝΙΣΗ ΑΠΟΤΕΛΕΣΜΑΤΩΝ (Μεγάλα & Καθαρά)
+        st.subheader("Αποτέλεσμα")
+        
+        res_col1, res_col2, res_col3 = st.columns(3)
+        res_col1.metric("Κόστος Παραγωγής", f"€{total_cost:.2f}")
+        res_col2.metric("Προτεινόμενη Τιμή", f"€{price:.2f}")
+        res_col3.metric("Κέρδος ανά Φιάλη", f"€{price - total_cost:.2f}")
+        
+        # Πίνακας Ανάλυσης
+        st.write("---")
+        st.write("**Αναλυτική Κοστολόγηση:**")
+        breakdown_df = pd.DataFrame({
+            "Κατηγορία": ["Λάδι", "Συσκευασία", "Εργατικά/Γενικά", "Κέρδος"],
+            "Αξία (€)": [cost_oil, cost_pack, (full_cost := total_cost - cost_oil - cost_pack), price - total_cost]
+        })
+        st.dataframe(breakdown_df, use_container_width=True)
+
+# --- TAB 2: DASHBOARD (ΓΡΑΦΗΜΑΤΑ) ---
+with tab2:
+    st.subheader("Στατιστικά Αγοράς")
+    
+    # Απλό γράφημα γραμμής
+    chart_data = pd.DataFrame({
+        'Μήνας': ['Ιαν', 'Φεβ', 'Μαρ', 'Απρ', 'Μαι', 'Ιουν'],
+        'EVOO': [7.2, 7.3, 7.5, 7.4, 7.6, 7.8],
+        'BIO': [8.8, 8.9, 9.2, 9.1, 9.3, 9.5]
+    })
+    
+    fig = px.line(chart_data, x='Μήνας', y=['EVOO', 'BIO'], title="Τάση Τιμών Ελαιολάδου (6 μήνες)")
+    st.plotly_chart(fig, use_container_width=True)
+
+# --- TAB 3: DATA EDITOR (ΑΛΛΑΓΕΣ ΤΙΜΩΝ) ---
 with tab3:
-    st.subheader("🗃️ Διαχείριση Δεδομένων (Live Edit)")
-    st.info("Εδώ βλέπεις τα δεδομένα που τραβάμε από το Excel/Database. Μπορείς να τα φιλτράρεις ή να τα κατεβάσεις.")
+    st.warning("⚠️ Εδώ μπορείς να αλλάξεις τις τιμές που χρησιμοποιεί ο υπολογιστής.")
     
-    c1, c2 = st.columns(2)
-    with c1:
-        st.markdown("**Βάση Δεδομένων Ελαιολάδων**")
-        edited_oils = st.data_editor(df_oils, num_rows="dynamic") # Επιτρέπει επεξεργασία!
-    
-    with c2:
-        st.markdown("**Βάση Δεδομένων Συσκευασιών**")
-        st.dataframe(df_pack)
+    col_d1, col_d2 = st.columns(2)
+    with col_d1:
+        st.markdown("**Τιμές Λαδιού**")
+        # Ο Editor επιτρέπει να αλλάζεις κελιά σαν Excel
+        edited_oils = st.data_editor(df_oils, key="oil_editor", num_rows="dynamic")
+        
+    with col_d2:
+        st.markdown("**Κόστη Συσκευασίας**")
+        edited_pack = st.data_editor(df_pack, key="pack_editor", num_rows="dynamic")
