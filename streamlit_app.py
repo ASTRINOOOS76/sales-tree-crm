@@ -65,61 +65,9 @@ if "pos" not in st.session_state:
     st.session_state.pos = []
 
 
-# ══════════════════════════════════════════════════════════════
-# AUTH SCREEN
-# ══════════════════════════════════════════════════════════════
+
 def auth_screen():
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col2:
-        st.markdown("# 🌳 Sales Tree CRM")
-        st.markdown("---")
-
-        tab_login, tab_register = st.tabs(["🔑 Login", "📝 Register"])
-
-        with tab_login:
-            with st.form("login_form"):
-                tenant_id = st.text_input("Tenant ID")
-                email = st.text_input("Email")
-                password = st.text_input("Password", type="password")
-                submitted = st.form_submit_button("Login", type="primary")
-                if submitted:
-                    try:
-                        r = requests.post(f"{API}/auth/login", json={
-                            "tenant_id": tenant_id, "email": email, "password": password
-                        }, timeout=10)
-                        if r.status_code == 200:
-                            data = r.json()
-                            st.session_state.token = data["access_token"]
-                            st.session_state.tenant_id = tenant_id
-                            st.session_state.user_email = email
-                            st.rerun()
-                        else:
-                            st.error("Bad credentials")
-                    except requests.ConnectionError:
-                        st.error("⚠️ API not reachable. Start the backend first.")
-
-        with tab_register:
-            with st.form("register_form"):
-                tenant_name = st.text_input("Company / Tenant Name")
-                reg_email = st.text_input("Admin Email")
-                reg_pass = st.text_input("Password", type="password", key="reg_pass")
-                reg_submit = st.form_submit_button("Register", type="primary")
-                if reg_submit:
-                    try:
-                        r = requests.post(f"{API}/auth/register", json={
-                            "tenant_name": tenant_name, "email": reg_email, "password": reg_pass
-                        }, timeout=10)
-                        if r.status_code == 200:
-                            data = r.json()
-                            st.session_state.token = data["access_token"]
-                            st.session_state.tenant_id = data["tenant_id"]
-                            st.session_state.user_email = reg_email
-                            st.success(f"Tenant created! ID: `{data['tenant_id']}`  — save this for login.")
-                            st.rerun()
-                        else:
-                            st.error(f"Error: {r.text}")
-                    except requests.ConnectionError:
-                        st.error("⚠️ API not reachable.")
+    pass  # Login/registration removed; app is fully local now.
 
 
 # ══════════════════════════════════════════════════════════════
