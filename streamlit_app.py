@@ -1,7 +1,6 @@
-"""
-Sales Tree CRM — Streamlit Frontend
-Connects to the FastAPI backend at http://localhost:8000
-"""
+
+# Sales Tree CRM — Streamlit Standalone App
+# (No backend API, all logic will be local or in this file)
 
 import streamlit as st
 import requests
@@ -64,7 +63,7 @@ def api_get(path, params=None):
             st.rerun()
         return r
     except requests.ConnectionError:
-        st.error("⚠️ Cannot connect to API. Make sure `uvicorn app.main:app --reload` is running on port 8000.")
+        st.error("⚠️ Cannot connect to data source. (No backend API in this version)")
         return None
 
 
@@ -73,7 +72,7 @@ def api_post(path, data):
         r = requests.post(f"{API}{path}", headers=api_headers(), json=data, timeout=10)
         return r
     except requests.ConnectionError:
-        st.error("⚠️ Cannot connect to API.")
+        st.error("⚠️ Cannot connect to data source. (No backend API in this version)")
         return None
 
 
@@ -82,7 +81,7 @@ def api_put(path, data):
         r = requests.put(f"{API}{path}", headers=api_headers(), json=data, timeout=10)
         return r
     except requests.ConnectionError:
-        st.error("⚠️ Cannot connect to API.")
+        st.error("⚠️ Cannot connect to data source. (No backend API in this version)")
         return None
 
 
@@ -91,7 +90,7 @@ def api_delete(path):
         r = requests.delete(f"{API}{path}", headers=api_headers(), timeout=10)
         return r
     except requests.ConnectionError:
-        st.error("⚠️ Cannot connect to API.")
+        st.error("⚠️ Cannot connect to data source. (No backend API in this version)")
         return None
 
 
@@ -100,7 +99,7 @@ def api_patch(path, data=None):
         r = requests.patch(f"{API}{path}", headers=api_headers(), json=data or {}, timeout=10)
         return r
     except requests.ConnectionError:
-        st.error("⚠️ Cannot connect to API.")
+        st.error("⚠️ Cannot connect to data source. (No backend API in this version)")
         return None
 
 
