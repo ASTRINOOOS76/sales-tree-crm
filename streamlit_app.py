@@ -3,12 +3,11 @@
 # (No backend API, all logic will be local or in this file)
 
 import streamlit as st
-import requests
-import json
+import copy
 from datetime import date, datetime
 
 # ── Config ───────────────────────────────────────────────────
-API = "http://localhost:8000"
+
 
 st.set_page_config(
     page_title="Sales Tree CRM",
@@ -51,56 +50,19 @@ if "user_email" not in st.session_state:
     st.session_state.user_email = None
 
 
-def api_headers():
-    return {"Authorization": f"Bearer {st.session_state.token}"}
 
-
-def api_get(path, params=None):
-    try:
-        r = requests.get(f"{API}{path}", headers=api_headers(), params=params, timeout=10)
-        if r.status_code == 401:
-            st.session_state.token = None
-            st.rerun()
-        return r
-    except requests.ConnectionError:
-        st.error("⚠️ Cannot connect to data source. (No backend API in this version)")
-        return None
-
-
-def api_post(path, data):
-    try:
-        r = requests.post(f"{API}{path}", headers=api_headers(), json=data, timeout=10)
-        return r
-    except requests.ConnectionError:
-        st.error("⚠️ Cannot connect to data source. (No backend API in this version)")
-        return None
-
-
-def api_put(path, data):
-    try:
-        r = requests.put(f"{API}{path}", headers=api_headers(), json=data, timeout=10)
-        return r
-    except requests.ConnectionError:
-        st.error("⚠️ Cannot connect to data source. (No backend API in this version)")
-        return None
-
-
-def api_delete(path):
-    try:
-        r = requests.delete(f"{API}{path}", headers=api_headers(), timeout=10)
-        return r
-    except requests.ConnectionError:
-        st.error("⚠️ Cannot connect to data source. (No backend API in this version)")
-        return None
-
-
-def api_patch(path, data=None):
-    try:
-        r = requests.patch(f"{API}{path}", headers=api_headers(), json=data or {}, timeout=10)
-        return r
-    except requests.ConnectionError:
-        st.error("⚠️ Cannot connect to data source. (No backend API in this version)")
-        return None
+if "companies" not in st.session_state:
+    st.session_state.companies = []
+if "contacts" not in st.session_state:
+    st.session_state.contacts = []
+if "deals" not in st.session_state:
+    st.session_state.deals = []
+if "activities" not in st.session_state:
+    st.session_state.activities = []
+if "quotes" not in st.session_state:
+    st.session_state.quotes = []
+if "pos" not in st.session_state:
+    st.session_state.pos = []
 
 
 # ══════════════════════════════════════════════════════════════
@@ -166,38 +128,32 @@ def auth_screen():
 def page_dashboard():
     st.markdown("## 📊 Dashboard")
 
-    companies = api_get("/companies")
-    contacts = api_get("/contacts")
-    deals = api_get("/deals")
-    activities = api_get("/activities")
-    quotes = api_get("/quotes")
-    pos = api_get("/purchase-orders")
+    companies = st.session_state.companies
+    contacts = st.session_state.contacts
+    deals = st.session_state.deals
+    activities = st.session_state.activities
+    quotes = st.session_state.quotes
+    pos = st.session_state.pos
 
     c1, c2, c3, c4, c5, c6 = st.columns(6)
     with c1:
-        n = len(companies.json()) if companies and companies.status_code == 200 else 0
-        st.metric("Companies", n)
+        st.metric("Companies", len(companies))
     with c2:
-        n = len(contacts.json()) if contacts and contacts.status_code == 200 else 0
-        st.metric("Contacts", n)
+        st.metric("Contacts", len(contacts))
     with c3:
-        n = len(deals.json()) if deals and deals.status_code == 200 else 0
-        st.metric("Deals", n)
+        st.metric("Deals", len(deals))
     with c4:
-        n = len(activities.json()) if activities and activities.status_code == 200 else 0
-        st.metric("Activities", n)
+        st.metric("Activities", len(activities))
     with c5:
-        n = len(quotes.json()) if quotes and quotes.status_code == 200 else 0
-        st.metric("Quotes", n)
+        st.metric("Quotes", len(quotes))
     with c6:
-        n = len(pos.json()) if pos and pos.status_code == 200 else 0
-        st.metric("POs", n)
+        st.metric("POs", len(pos))
 
     st.markdown("---")
 
     # Pipeline summary
-    if deals and deals.status_code == 200:
-        deal_list = deals.json()
+    if deals:
+        deal_list = deals
         if deal_list:
             st.markdown("### 🎯 Pipeline Overview")
             stages = ["lead", "qualified", "proposal", "negotiation", "won", "lost"]
@@ -211,8 +167,8 @@ def page_dashboard():
                     st.markdown(f"💰 €{value:,.2f}")
 
     # Recent activities
-    if activities and activities.status_code == 200:
-        act_list = activities.json()[:5]
+    if activities:
+        act_list = activities[:5]
         if act_list:
             st.markdown("### 📋 Recent Activities")
             for a in act_list:
