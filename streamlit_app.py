@@ -220,13 +220,15 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
+
 # ── Session State ────────────────────────────────────────────
+# For local/standalone use, set default user info so app loads
 if "token" not in st.session_state:
-    st.session_state.token = None
+    st.session_state.token = "local-token"
 if "tenant_id" not in st.session_state:
-    st.session_state.tenant_id = None
+    st.session_state.tenant_id = "local-tenant"
 if "user_email" not in st.session_state:
-    st.session_state.user_email = None
+    st.session_state.user_email = "local@example.com"
 
 
 
