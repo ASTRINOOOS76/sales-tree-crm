@@ -527,11 +527,28 @@ def page_deals():
         if not deals:
             st.info("No deals yet.")
         else:
+            from app.services.deal_ml import predict_deal
+            from app.services.mailer import send_prediction_email
             for d in deals:
                 co_name = co_map.get(d.get("company_id"), "—")
                 with st.expander(f"**{d['title']}** — {d['stage'].upper()} · €{d.get('value') or 0:,.0f} · {co_name}"):
                     st.write(f"Expected close: {d.get('expected_close', '-')}")
                     st.write(f"Notes: {d.get('notes', '-')}")
+                    # ML prediction
+                    try:
+                        pred = predict_deal(
+                            d.get("value", 0),
+                            PIPELINE_STAGES.index(d.get("stage", "Lead")) if d.get("stage", "Lead") in PIPELINE_STAGES else 0,
+                            co_name.count(" ")+1,
+                            2,
+                            10,
+                            5
+                        )
+                        st.write(f"ML Prediction: {pred}")
+                        if pred == 1:
+                            send_prediction_email(d.get("id", 0), pred)
+                    except Exception as e:
+                        st.write("ML Prediction: N/A")
                     if st.button("🗑️ Delete", key=f"del_deal_{d['id']}"):
                         dr = api_delete(f"/deals/{d['id']}")
                         if dr and dr.status_code == 200:
