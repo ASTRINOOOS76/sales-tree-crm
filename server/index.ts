@@ -17,8 +17,8 @@ registerRoutes(app);
 const clientDist = path.join(__dirname, "..", "dist", "public");
 app.use(express.static(clientDist));
 
-// SPA fallback
-app.get("*", (_req, res) => {
+// SPA fallback (Express 5 requires named param for catch-all)
+app.get("/{*splat}", (_req, res) => {
   res.sendFile(path.join(clientDist, "index.html"));
 });
 
